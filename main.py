@@ -4,6 +4,9 @@ from pydantic import BaseModel
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import json
+from fastapi.openapi.utils import get_openapi
+from fastapi.openapi.docs import get_swagger_ui_html
+
 
 #Modelo de tabla usuarios
 class Usuario(BaseModel):
@@ -24,6 +27,15 @@ mySqlConexion = mysql.connector.connect(
 
 #Esta es una instancia de FastAPI, es lo que levanta la api en local :D
 app = FastAPI()
+
+@app.get("/openapi.json")
+async def get_open_api_endpoint():
+    return JSONResponse(get_openapi(title="Tu API", version="0.0.1", routes=app.routes))
+
+@app.get("/docs", include_in_schema=False)
+async def get_documentation():
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="documentación")
+
 
 #Recomiendo siempre dejar un endpoint para la ruta "/" ya que
 #En esta ruta se carga siempre nuestra api y si no defines algo 
@@ -65,6 +77,7 @@ def get_usuarios():
     ]
 
     #Devolver los usuarios como una respuesta JSON
+    #return JSONResponse(content=usuarios)
     return JSONResponse(content=usuarios)
 
 #Endpoint GET un usuario por id (PUNTO 10)
@@ -131,3 +144,58 @@ def actualizar_usuario(usuario: Usuario):
         return JSONResponse(content={"mensaje": f"El usuario con id {id} ha sido actualizado"})
     except:
         return JSONResponse(status_code=404, content={"error": f"el usuario no pudo ser actualizado"})
+
+
+# Endpoint para agregar un usuario
+@app.post("/usuarios")
+def agregar_usuario(usuario: Usuario):
+
+    try:
+        # Crear un cursor para ejecutar consultas SQL
+        cursor = mySqlConexion.cursor()
+
+        # Extraer los datos del objeto usuario
+        id = usuario.IdUsuario
+        nombre = usuario.Nombre
+        apellido = usuario.Apellido
+        email = usuario.Correo
+        FechaCreacion = usuario.FechaCreacion
+        telefono = usuario.Telefono
+
+        # Ejecutar una consulta SQL para insertar el nuevo usuario en la tabla Usuarios
+        query = "INSERT INTO Usuarios (Nombre, Apellido, Correo, FechaCreacion, Telefono) VALUES (%s, %s, %s, %s, %s)"
+        values = (nombre, apellido, email, FechaCreacion, telefono)
+        cursor.execute(query, values)
+
+        # Guardar los cambios en la base de datos
+        mySqlConexion.commit()
+
+        # Cerrar el cursor y la conexión a la base de datos
+        cursor.close()
+
+        # Devolver una respuesta JSON indicando que el usuario ha sido agregado
+        return JSONResponse(content={"mensaje": f"El usuario ha sido agregado"})
+    except:
+        return JSONResponse(status_code=404, content={"error": f"el usuario no pudo ser agregado"})
+    
+    # Endpoint DELETE para eliminar un usuario
+@app.delete("/usuarios/{id_usuario}")
+def eliminar_usuario(id_usuario: int):
+    try:
+        # Crear un cursor para ejecutar consultas SQL
+        cursor = mySqlConexion.cursor()
+
+        # Ejecutar una consulta SQL para eliminar el usuario con el id especificado
+        query = "DELETE FROM Usuarios WHERE IdUsuario = %s"
+        cursor.execute(query, (id_usuario,))
+
+        # Guardar los cambios en la base de datos
+        mySqlConexion.commit()
+
+        # Cerrar el cursor y la conexión a la base de datos
+        cursor.close()
+
+        # Devolver una respuesta JSON indicando que el usuario ha sido eliminado
+        return JSONResponse(content={"mensaje": f"El usuario con id {id_usuario} ha sido eliminado"})
+    except:
+        return JSONResponse(status_code=404, content={"error": f"El usuario con id {id_usuario} no pudo ser eliminado"})
