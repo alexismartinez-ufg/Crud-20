@@ -3,12 +3,11 @@ import mysql.connector
 from pydantic import BaseModel
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-import json
 from fastapi.openapi.utils import get_openapi
 from fastapi.openapi.docs import get_swagger_ui_html
 
 
-#Modelo de tabla usuarios
+#Modelo de tabla usuarios   
 class Usuario(BaseModel):
     IdUsuario: int
     Nombre: str
@@ -28,7 +27,7 @@ mySqlConexion = mysql.connector.connect(
 #Esta es una instancia de FastAPI, es lo que levanta la api en local :D
 app = FastAPI()
 
-@app.get("/openapi.json")
+@app.get("/openapi.json", include_in_schema=False)
 async def get_open_api_endpoint():
     return JSONResponse(get_openapi(title="Tu API", version="0.0.1", routes=app.routes))
 
@@ -40,9 +39,9 @@ async def get_documentation():
 #Recomiendo siempre dejar un endpoint para la ruta "/" ya que
 #En esta ruta se carga siempre nuestra api y si no defines algo 
 #Te mostrara un mensaje de error feo y aquí nada más feo que python
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
-    return {"message": "Hello World"}
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="documentación")
 
 #Endpoint GET todos los usuarios (PUNTO 7)
 @app.get("/usuarios")
@@ -179,6 +178,9 @@ def agregar_usuario(usuario: Usuario):
         return JSONResponse(status_code=404, content={"error": f"el usuario no pudo ser agregado"})
     
     # Endpoint DELETE para eliminar un usuario
+
+
+#Endpoint para eliminar usuario
 @app.delete("/usuarios/{id_usuario}")
 def eliminar_usuario(id_usuario: int):
     try:
