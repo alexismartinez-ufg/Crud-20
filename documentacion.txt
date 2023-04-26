@@ -1,0 +1,60 @@
+Documentación para hacer la practica del 20% del parcial
+
+CRUD FASTAPI PYTHON
+
+1- Iniciar siempre verificando si tenemos python, correr en la terminal de visual studio o en cmd "python --version" (en mi caso tengo la 3.10.6)
+
+2- Continuamos instalando la libreria de fastapi en la terminar con "pip install fastapi" e importante tambien instalar uvicorn con la siguiente linea pip install "uvicorn[standard]"
+    Esto es importante para poder correr nuestra api más adelante!!
+
+3- Luego de instalar correctamente la libreria podemos crear la tabla de base de datos con la que trabajaremos para hacer el CRUD
+    En mi caso trabajaré con MySql que trae XAMP, creare una base de datos llamada "crud20%" y una sola tabla "Usuarios", aquí la query =>
+
+    CREATE DATABASE IF NOT EXISTS `crud20%`;
+    USE `crud20%`;
+
+    CREATE TABLE IF NOT EXISTS `Usuarios` (
+    `IdUsuario` INT PRIMARY KEY AUTO_INCREMENT,
+    `Nombre` VARCHAR(255),
+    `Apellido` VARCHAR(255),
+    `Correo` VARCHAR(255),
+    `FechaCreacion` DATE,
+    `Telefono` VARCHAR(255)
+    );
+
+4- Una vez creada la tabla en phpmyadmin (mysql de xampp), regresamos a visual studio y verificamos si tenemos instalada el conector de mysql para python
+    con la siguiente linea en la terminal "pip list", en caso no tengan instalado el conector como yo utilizaremos este otro comando "pip install mysql-connector-python"
+
+5- Ahora procedemos en nuestro archivoo main.py a importar el conector de mysql y a importar lo que utilizarémos de fastapi
+
+6- Conectamos la base de datos y almacenamos la conexión en una variable, en mi caso la llamaré "mySqlConexion", en este caso nuestra conexión quedará:
+
+    host: "localhost" //recordar que necesitamos correr xamp
+    User: "root" //usuario por defecto
+    Password: "" //password por defecto, quedara vacio
+    database: "crud20%" //ese nombre es el de la base de datos que creamos a la que pertenece la tabla Usuarios, ustedes la pueden cambiar
+
+7- Como punto inicial para la creación de la api vamos a definir el "endpoint" o Uri a la que accederemos para obtener todos los elementos de nuestra tabla "Usuarios"
+    esto conlleva un "endpoint" de tipo GET, que su unica función es obtener la información
+
+8- Una vez creado nuestro endpoint de tipo GET, podemos correr nuestra api para verificar su correcto funcionamiento con la siguiente linea 
+
+    "uvicorn main:app --reload"
+    IMPORTANTE aclarar que uvicorn es el servicio que levanta nuestra api
+    main es el nombre de nuestro archivo .py, en mi caso es main.py 
+    en tu caso puede ser Ejercicio.py, por lo tanto quedaria => "uvicorn Ejercicio:app --reload"
+
+9- Si no tenemos ningun error de sintaxis podemos acceder correctamente a la siguiente URL http://127.0.0.1:8000/usuarios en nuestro navegador o tambien http://localhost:8000/usuarios
+    (Aclarar que entramos a la URI /usuarios ya que es el endpoint que he dejado en el archivo main.py, tu puedes llamarlo de otra forma si así lo deseas)
+    En este caso al acceder solo se nos muestra "[]" ya que no tenemos data en la base de datos, aquí una query para llenar la base de datos y probar nuevamente el GET
+
+    INSERT INTO Usuarios (Nombre, Apellido, Correo, FechaCreacion, Telefono) VALUES
+    ('Juan', 'Pérez', 'juan.perez@example.com', '2022-01-01', '555-1234'),
+    ('María', 'González', 'maria.gonzalez@example.com', '2022-01-02', '555-5678'),
+    ('Pedro', 'Ramírez', 'pedro.ramirez@example.com', '2022-01-03', '555-9012'),
+    ('Ana', 'Sánchez', 'ana.sanchez@example.com', '2022-01-04', '555-3456'),
+    ('Luis', 'Hernández', 'luis.hernandez@example.com', '2022-01-05', '555-7890');
+
+10- Para continuar ahora haremos un GET por id de usuario, crearemos un nuevo endpoint el cual recibira unicamente un int
+
+
