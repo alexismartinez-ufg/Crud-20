@@ -1,20 +1,26 @@
 #Importar librerias (PUNTO 5)
 import mysql.connector
+import re
 from pydantic import BaseModel
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
 from fastapi.openapi.docs import get_swagger_ui_html
+from typing import Optional
 
 
 #Modelo de tabla usuarios   
 class Usuario(BaseModel):
-    IdUsuario: int
-    Nombre: str
-    Apellido: str
-    Correo: str
-    FechaCreacion: str
-    Telefono: str
+    IdUsuario: Optional[int]=None
+    Nombre: Optional[str]=None 
+    Apellido: Optional[str]=None
+    Correo: Optional[str]=None
+    FechaCreacion: Optional[str]=None
+    Telefono: Optional[str]=None
+
+    
+# Expresión regular para validar el correo
+correo_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
 #Guardar la conexión a la base de datos en una variable (PUNTO 6)
 mySqlConexion = mysql.connector.connect(
@@ -29,7 +35,7 @@ app = FastAPI()
 
 @app.get("/openapi.json", include_in_schema=False)
 async def get_open_api_endpoint():
-    return JSONResponse(get_openapi(title="Tu API", version="0.0.1", routes=app.routes))
+    return JSONResponse(get_openapi(title="Parcial 20%", version="1.0.0", routes=app.routes))
 
 @app.get("/docs", include_in_schema=False)
 async def get_documentation():
@@ -81,7 +87,13 @@ def get_usuarios():
 
 #Endpoint GET un usuario por id (PUNTO 10)
 @app.get("/usuarios/{id_usuario}")
-def get_usuarioById(id_usuario: int):
+def get_usuarioById(id_usuario):
+
+    try:
+        id_usuario = int(id_usuario)
+    except ValueError:
+        return JSONResponse(status_code=400, content={"mensaje": "El ID de usuario debe ser un número entero"})
+
     
     #Crear un cursor para ejecutar consultas SQL
     cursor = mySqlConexion.cursor()
@@ -113,20 +125,44 @@ def get_usuarioById(id_usuario: int):
     
 
 # Endpoint para editar un usuario
-@app.put("/usuarios")
-def actualizar_usuario(usuario: Usuario):
+@app.put("/usuarios/{id_usuario}")
+def actualizar_usuario(id_usuario, usuario: Usuario):
+
+    try:
+        id_usuario = int(id_usuario)
+    except ValueError:
+        return JSONResponse(status_code=400, content={"mensaje": "El ID de usuario debe ser un número entero"})
 
     try:
         # Crear un cursor para ejecutar consultas SQL
         cursor = mySqlConexion.cursor()
 
+        if usuario.Correo is None or usuario.Correo == '':
+            return JSONResponse(status_code=400, content={"error": f"El correo es requerido"})
+
+        if re.match(correo_regex, usuario.Correo):
+            # Validar que el correo no esté registrado ya en la base de datos
+            query = "SELECT Correo FROM Usuarios WHERE Correo = %s and IdUsuario != %s"
+            cursor.execute(query, (usuario.Correo, id_usuario,))
+            resultado = cursor.fetchone()
+        else:
+            return JSONResponse(status_code=400, content={"error": f"{usuario.Correo} no es un correo electrónico válido"})
+
+        if resultado:
+            # El correo ya está registrado en la base de datos, devolver un error
+            return JSONResponse(status_code=400, content={"error": f"El correo {usuario.Correo} ya está registrado"})
+
+
         # Extraer los datos del objeto usuario
-        id = usuario.IdUsuario
+        id = id_usuario
         nombre = usuario.Nombre
         apellido = usuario.Apellido
         email = usuario.Correo
         FechaCreacion = usuario.FechaCreacion
         telefono = usuario.Telefono
+
+        if nombre == '' or nombre == None or apellido == '' or apellido == None or FechaCreacion == '' or FechaCreacion== None or telefono == '' or telefono == None:
+            return JSONResponse(status_code=400, content={"error": f"Faltan datos requeridos"})
 
         # Ejecutar una consulta SQL para actualizar la información del usuario
         query = "UPDATE Usuarios SET Nombre=%s, Apellido=%s, Correo=%s, FechaCreacion=%s, Telefono=%s WHERE IdUsuario=%s"
@@ -145,7 +181,6 @@ def actualizar_usuario(usuario: Usuario):
         return JSONResponse(status_code=404, content={"error": f"el usuario no pudo ser actualizado"})
 
 
-# Endpoint para agregar un usuario
 @app.post("/usuarios")
 def agregar_usuario(usuario: Usuario):
 
@@ -153,13 +188,31 @@ def agregar_usuario(usuario: Usuario):
         # Crear un cursor para ejecutar consultas SQL
         cursor = mySqlConexion.cursor()
 
+        if usuario.Correo is None or usuario.Correo == '':
+            return JSONResponse(status_code=400, content={"error": f"El correo es requerido"})
+
+        if re.match(correo_regex, usuario.Correo):
+            # Validar que el correo no esté registrado ya en la base de datos
+            query = "SELECT Correo FROM Usuarios WHERE Correo = %s"
+            cursor.execute(query, (usuario.Correo,))
+            resultado = cursor.fetchone()
+        else:
+            return JSONResponse(status_code=400, content={"error": f"{usuario.Correo} no es un correo electrónico válido"})
+
+        if resultado:
+            # El correo ya está registrado en la base de datos, devolver un error
+            return JSONResponse(status_code=400, content={"error": f"El correo {usuario.Correo} ya está registrado"})
+
         # Extraer los datos del objeto usuario
         id = usuario.IdUsuario
-        nombre = usuario.Nombre
-        apellido = usuario.Apellido
-        email = usuario.Correo
-        FechaCreacion = usuario.FechaCreacion
-        telefono = usuario.Telefono
+        nombre:str = usuario.Nombre
+        apellido:str = usuario.Apellido
+        email:str = usuario.Correo
+        FechaCreacion:str = usuario.FechaCreacion
+        telefono:str = usuario.Telefono
+
+        if nombre == '' or nombre == None or apellido == '' or apellido == None or FechaCreacion == '' or FechaCreacion== None or telefono == '' or telefono == None:
+            return JSONResponse(status_code=400, content={"error": f"Faltan datos requeridos"})
 
         # Ejecutar una consulta SQL para insertar el nuevo usuario en la tabla Usuarios
         query = "INSERT INTO Usuarios (Nombre, Apellido, Correo, FechaCreacion, Telefono) VALUES (%s, %s, %s, %s, %s)"
@@ -174,15 +227,21 @@ def agregar_usuario(usuario: Usuario):
 
         # Devolver una respuesta JSON indicando que el usuario ha sido agregado
         return JSONResponse(content={"mensaje": f"El usuario ha sido agregado"})
-    except:
-        return JSONResponse(status_code=404, content={"error": f"el usuario no pudo ser agregado"})
-    
-    # Endpoint DELETE para eliminar un usuario
+    except Exception as e:
+        # Manejar la excepción aquí
+        return JSONResponse(status_code=500, content={"error": f"No se pudo agregar el usuario, {e}"})
+
 
 
 #Endpoint para eliminar usuario
 @app.delete("/usuarios/{id_usuario}")
-def eliminar_usuario(id_usuario: int):
+def eliminar_usuario(id_usuario):
+
+    try:
+        id_usuario = int(id_usuario)
+    except ValueError:
+        return JSONResponse(status_code=400, content={"mensaje": "El ID de usuario debe ser un número entero"})
+
     try:
         # Crear un cursor para ejecutar consultas SQL
         cursor = mySqlConexion.cursor()
