@@ -22,6 +22,8 @@ class Usuario(BaseModel):
 # Expresión regular para validar el correo
 correo_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
+fecha_regex = r'^\d{4}-\d{2}-\d{2}'
+
 #Guardar la conexión a la base de datos en una variable (PUNTO 6)
 mySqlConexion = mysql.connector.connect(
   host="localhost",
@@ -139,6 +141,9 @@ def actualizar_usuario(id_usuario, usuario: Usuario):
 
         if usuario.Correo is None or usuario.Correo == '':
             return JSONResponse(status_code=400, content={"error": f"El correo es requerido"})
+        
+        if not re.match(fecha_regex, usuario.FechaCreacion):
+            return JSONResponse(status_code=400, content={"error": f"La fecha no es correcta"})
 
         if re.match(correo_regex, usuario.Correo):
             # Validar que el correo no esté registrado ya en la base de datos
@@ -190,6 +195,9 @@ def agregar_usuario(usuario: Usuario):
 
         if usuario.Correo is None or usuario.Correo == '':
             return JSONResponse(status_code=400, content={"error": f"El correo es requerido"})
+        
+        if not re.match(fecha_regex, usuario.FechaCreacion):
+            return JSONResponse(status_code=400, content={"error": f"La fecha no es correcta"})
 
         if re.match(correo_regex, usuario.Correo):
             # Validar que el correo no esté registrado ya en la base de datos
